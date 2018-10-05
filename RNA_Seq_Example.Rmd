@@ -1,0 +1,81 @@
+---
+title: "RNA_Seq_Wrangle"
+author: "Shruti"
+date: "10/4/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Download necessary files from  https://github.com/tgrn510/RNASeqExample.git
+
+##Unzip the files into directory ~/RNASeqExample/
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(RColorBrewer)
+library(dendextend)
+library(plotly)
+setwd("~/RNASeqExample/")
+samples <- read.csv('sample_info.csv',header = TRUE, sep = ",", quote = "\"", dec = ".", fill = TRUE, row.names = 1)
+genes <- read.csv('expression_results.csv', header = TRUE, sep = ",", quote = "\"", dec = ".", fill = TRUE, row.names = 1)
+#plot(genes$KITA_01, genes$KITA_02, type= "p")
+
+#1.Please create a density distribution of expression values within genes$KITA_02 on a log scale
+d <- density(log(genes$KITA_01))
+plot(d)
+
+#2. Please create a density distribution of PF_BASES within the sample_info.csv file.
+
+plot(density(samples$PF_BASES))
+
+#3.Please create a density distribution of PF_BASES within the sample_info.csv file.
+
+a <- genes$KITA_01[(genes$KITA_01>10)]
+b <- genes$KITA_02[(genes$KITA_02>10)]
+c <- b[1:5640]
+plot(a,c)
+
+plot(log2(genes$KITA_01[(genes$KITA_01>10 |genes$KITA_02>10 )]),log2(genes$KITA_02[(genes$KITA_01>10 |genes$KITA_02>10 )]))
+
+#4.Please create a heatmap showing how well all the samples correlate using the cor function where the low values are green and the high values are red.
+
+corr <- cor(genes)
+melted_corr <- melt(corr)
+head(melted_corr)
+
+col <- colorRampPalette(brewer.pal(8, "PiYG"))(25)
+
+ggplot(melted_corr, aes(x = Var1, y = Var2)) +
+ geom_raster(aes(fill = value)) +
+ scale_fill_gradient2(low="green", mid="yellow", high="red", midpoint=0.5) + theme_classic()
+
+#5. Please create a dendrogram using the dendextend library, but coloring the top 4 branches different colors, including yellow this time.
+genes_sample <- t(genes[c(rep(FALSE,19),TRUE), ])
+clusters <- hclust(dist(genes_sample))
+dend <- as.dendrogram(clusters)
+dend <- rotate(dend, 1:93)
+dend <- color_branches(dend, k=4, col=c("red","blue","yellow","green"))
+par(cex=0.25) 
+plot(dend)
+
+#6. Please create a 3D principal component analysis using the library prcomp and visualize within plot_ly on the samples showing PC2, PC3, and PC5.
+
+min(genes[genes>0])
+genes.log <-log2(genes+8.05e-12)
+genes.log.small <- genes.log[seq(1, nrow(genes.log), 20), ]
+pca <- prcomp(genes.log.small,center = TRUE,scale. = TRUE)
+
+pcadf<-data.frame(pca$rotation)
+
+plot_ly(pcadf, x = ~PC2, y = ~PC3, z = ~PC5, color = ~PC4, colors = c('#BF382A', '#0C4B8E')) %>% add_markers() %>%
+ layout(scene = list(xaxis = list(title = 'PC1'),
+ yaxis = list(title = 'PC2'), zaxis = list(title = 'PC3')))
+
+
+
+```
+
